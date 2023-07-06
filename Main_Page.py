@@ -26,7 +26,7 @@ def extract_audio(video_path, savename):
 
 
 # Old func
-# @st.cache_data
+@st.cache_data
 def save_audio(url):
     yt = YouTube(url)
     video = yt.streams.filter(only_audio=True).first()
@@ -37,7 +37,7 @@ def save_audio(url):
     return yt.title, file_name, yt.thumbnail_url
 
 
-# @st.cache_data
+@st.cache_data
 def upload_to_AssemblyAI(save_location):
     CHUNK_SIZE = 5242880
 
@@ -61,7 +61,7 @@ def upload_to_AssemblyAI(save_location):
     return audio_url
 
 
-# @st.cache_data
+@st.cache_data
 def start_analysis(audio_url):
 
     ## Start transcription job of audio file
@@ -84,7 +84,7 @@ def start_analysis(audio_url):
     return polling_endpoint
 
 
-# @st.cache_data
+@st.cache_data
 def get_analysis_results(polling_endpoint):
 
     status = "submitted"
@@ -93,8 +93,6 @@ def get_analysis_results(polling_endpoint):
         print(status)
         polling_response = requests.get(polling_endpoint, headers=headers)
         status = polling_response.json()["status"]
-        # st.write(polling_response.json())
-        # st.write(status)
 
         if status == "submitted" or status == "processing" or status == "queued":
             print("not ready yet")
@@ -112,7 +110,7 @@ def get_analysis_results(polling_endpoint):
             break
 
 
-# @st.cache_data
+@st.cache_data
 def open_video_file(file):
     video_file = open(file, "rb")
     return video_file.read()
@@ -122,7 +120,9 @@ st.title("Autotorial")
 # language = st.selectbox("Language:", ("🇺🇸 🇦🇺 🇬🇧", "🇪🇸", "🇩🇪", "🇫🇷", "🇳🇱", "🇮🇹", "🇵🇹"))
 file = st.file_uploader("Upload a video file to generate a tutorial")
 
+
 if file is not None:
+    st.cache_data.clear()
     # Tabs
     tab1, tab2 = st.tabs(
         [
