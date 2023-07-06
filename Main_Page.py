@@ -11,6 +11,10 @@ upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
 start_time_conversion = 1000
 
+if "file" not in st.session_state:
+    st.session_state.file = None
+
+
 headers = {"authorization": st.secrets["auth_key"], "content-type": "application/json"}
 
 # Custom Functions
@@ -118,11 +122,15 @@ def open_video_file(file):
 
 st.title("Autotorial")
 # language = st.selectbox("Language:", ("🇺🇸 🇦🇺 🇬🇧", "🇪🇸", "🇩🇪", "🇫🇷", "🇳🇱", "🇮🇹", "🇵🇹"))
+
 file = st.file_uploader("Upload a video file to generate a tutorial")
 
-
 if file is not None:
-    st.cache_data.clear()
+    # Save file
+    if st.session_state.file != file:
+        st.cache_data.clear()
+        st.session_state.file = file
+
     # Tabs
     tab1, tab2 = st.tabs(
         [
