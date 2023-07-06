@@ -169,8 +169,7 @@ if file is not None:
                 file,
                 start_time=results.json()["iab_categories_result"]["results"][i][
                     "timestamp"
-                ]["start"]
-                / start_time_conversion,
+                ]["start"],
             )
             st.write(results.json()["iab_categories_result"]["results"][i]["text"])
             st.divider()
