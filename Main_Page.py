@@ -9,6 +9,7 @@ from time import sleep
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
+start_time_conversion = 1000
 
 headers = {"authorization": st.secrets["auth_key"], "content-type": "application/json"}
 
@@ -25,7 +26,7 @@ def extract_audio(video_path, savename):
 
 
 # Old func
-@st.cache_data
+# @st.cache_data
 def save_audio(url):
     yt = YouTube(url)
     video = yt.streams.filter(only_audio=True).first()
@@ -36,7 +37,7 @@ def save_audio(url):
     return yt.title, file_name, yt.thumbnail_url
 
 
-@st.cache_data
+# @st.cache_data
 def upload_to_AssemblyAI(save_location):
     CHUNK_SIZE = 5242880
 
@@ -60,7 +61,7 @@ def upload_to_AssemblyAI(save_location):
     return audio_url
 
 
-@st.cache_data
+# @st.cache_data
 def start_analysis(audio_url):
 
     ## Start transcription job of audio file
@@ -83,7 +84,7 @@ def start_analysis(audio_url):
     return polling_endpoint
 
 
-@st.cache_data
+# @st.cache_data
 def get_analysis_results(polling_endpoint):
 
     status = "submitted"
@@ -111,7 +112,7 @@ def get_analysis_results(polling_endpoint):
             break
 
 
-@st.cache_data
+# @st.cache_data
 def open_video_file(file):
     video_file = open(file, "rb")
     return video_file.read()
@@ -122,17 +123,19 @@ st.title("Autotorial")
 file = st.file_uploader("Upload a video file to generate a tutorial")
 
 if file is not None:
+    # Tabs
     tab1, tab2 = st.tabs(
         [
             "Content 🗒️",
             "JSON",
         ]
     )
+
     # Save dragged video file
     path = save_uploadedfile(file)
 
     # Name dragged audio file
-    save_location = path + "audio_file_extracted.mp3"
+    save_location = path + "audio_file_ext.mp3"
 
     # Save audio file
     extract_audio(path + file.name, save_location)
@@ -166,7 +169,8 @@ if file is not None:
                 file,
                 start_time=results.json()["iab_categories_result"]["results"][i][
                     "timestamp"
-                ]["start"],
+                ]["start"]
+                / start_time_conversion,
             )
             st.write(results.json()["iab_categories_result"]["results"][i]["text"])
             st.divider()
