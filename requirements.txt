@@ -1,5 +1,6 @@
-pandas==1.5.0
-pytube==12.1.0
-requests==2.27.1
+moviepy==1.0.3
+pandas==2.0.1
+pytube==15.0.0
+Requests==2.31.0
 st_clickable_images==0.0.3
-streamlit==1.13.0
+streamlit==1.24.0
