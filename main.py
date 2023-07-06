@@ -1,6 +1,5 @@
 import streamlit as st
 import moviepy.editor as mp
-from st_clickable_images import clickable_images
 import pandas as pd
 from pytube import YouTube
 import os
@@ -9,11 +8,10 @@ from time import sleep
 import langchain
 from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain, SequentialChain
+from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
-from langchain.utilities import WikipediaAPIWrapper
 from langchain.callbacks import get_openai_callback
-import sys
+
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
