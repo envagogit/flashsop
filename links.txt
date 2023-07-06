@@ -1,0 +1,84 @@
+Stuff
+
+    if language == "🇺🇸 🇦🇺 🇬🇧":
+        data = {
+            "audio_url": audio_url,
+            "language_detection": False,
+            "language_code": "en",
+            "iab_categories": True,
+            "content_safety": True,
+            "summarization": True,
+            "summary_type": "bullets",
+            "summary_model": "informative",
+        }
+    else:
+        data = {
+            "audio_url": audio_url,
+            "language_detection": True,
+            "iab_categories": True,
+        }
+    st.write(data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """
+    summary = results.json()["summary"]
+    topics = results.json()["iab_categories_result"]["summary"]
+    sensitive_topics = results.json()["content_safety_labels"]["summary"]
+
+    st.video(file)
+    st.audio(save_location)
+
+    
+
+    st.header("Summary of this video")
+    st.write(summary)
+    
+    st.header("Sensitive content")
+    if sensitive_topics != {}:
+        st.subheader("🚨 Mention of the following sensitive topics detected.")
+        moderation_df = pd.DataFrame(sensitive_topics.items())
+        moderation_df.columns = ["topic", "confidence"]
+        st.dataframe(moderation_df, use_container_width=True)
+
+    else:
+        st.subheader("✅ All clear! No sensitive content detected.")
+    
+    st.header("Topics discussed")
+    topics_df = pd.DataFrame(topics.items())
+    topics_df.columns = ["topic", "confidence"]
+    topics_df["topic"] = topics_df["topic"].str.split(">")
+    expanded_topics = topics_df.topic.apply(pd.Series).add_prefix("topic_level_")
+    topics_df = (
+        topics_df.join(expanded_topics)
+        .drop("topic", axis=1)
+        .sort_values(["confidence"], ascending=False)
+        .fillna("")
+    )
+
+    st.dataframe(topics_df)
+    """
