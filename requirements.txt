@@ -1,8 +1,7 @@
+openai==0.27.8
 langchain==0.0.225
 moviepy==1.0.3
 pandas==2.0.1
 pytube==15.0.0
 Requests==2.31.0
-st_clickable_images==0.0.3
 streamlit==1.24.0
-openai==0.27.8
