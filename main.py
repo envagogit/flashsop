@@ -11,7 +11,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 from langchain.callbacks import get_openai_callback
-
+import openai
+import random
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
@@ -129,6 +130,7 @@ def open_video_file(file):
 
 def create_main_prompt(results):
     prompt = ""
+    prompt_vector = []
     i = 0
     for part in results.json()["iab_categories_result"]["results"]:
         prompt = (
@@ -139,8 +141,16 @@ def create_main_prompt(results):
             + results.json()["iab_categories_result"]["results"][i]["text"]
             + "\n \n"
         )
+        prompt_vector.append(
+            "Part "
+            + str(i + 1)
+            + "\n \n"
+            + results.json()["iab_categories_result"]["results"][i]["text"]
+            + "\n \n"
+        )
         i = i + 1
-    return prompt
+
+    return prompt, prompt_vector
 
 
 # LLM Funct
@@ -189,6 +199,54 @@ def format_llm_output(llm_output):
     return titles_formatted, summaries_formatted
 
 
+# Simple LLM
+def simple_llm_run(prompt):
+    main_memory = ConversationBufferMemory(
+        input_key="user_input", memory_key="chat_history"
+    )
+    llm = OpenAI(temperature=llm_temperature)
+    prompt_template = PromptTemplate(
+        input_variables=["user_input"],
+        template=prompt + "{user_input}",
+    )
+    main_prompt_chain = LLMChain(
+        llm=llm,
+        prompt=prompt_template,
+        verbose=False,
+        output_key="main_prompt_answer",
+        memory=main_memory,
+    )
+    # Run LLM
+    with get_openai_callback() as cb:
+        main_prompt_answer = main_prompt_chain.run("")
+        print(cb)
+    return main_prompt_answer
+
+
+def format_simple_llm_questions(text):
+    parenthesis = text.split(">")
+    i = 0
+    for part in parenthesis:
+        if part != ">":
+            if i == 0:
+                # st.write(part[:-2])
+                st.markdown(
+                    "<h5 style='text-align: center;'>" + part[:-2] + "</h5>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                if part == parenthesis[len(parenthesis) - 1]:
+                    with st.expander(str(i) + ") " + part.partition("[")[0]):
+                        st.write(part.partition("[")[2].replace("]", ""))
+
+                else:
+                    with st.expander(str(i) + ") " + part.partition("[")[0]):
+                        st.write(part[:-2].partition("[")[2].replace("]", ""))
+
+            i = i + 1
+
+
+st.set_page_config(page_title="Flash SOP", page_icon="⚡")
 st.markdown(
     "<h1 style='text-align: center;'>Fla⚡h SOP</h1>",
     unsafe_allow_html=True,
@@ -230,15 +288,12 @@ if file is not None:
             # receive the results
             results = get_analysis_results(polling_endpoint)
 
-            # LLM
+            # LLMs
             # Main prompt
-            main_prompt = st.secrets["pre_prompt"] + create_main_prompt(results=results)
+            audio_text, audio_text_vector = create_main_prompt(results=results)
+            main_prompt = st.secrets["pre_prompt"] + audio_text
 
             # Init LLM
-            main_memory = ConversationBufferMemory(
-                input_key="user_input", memory_key="chat_history"
-            )
-            llm = OpenAI(temperature=0.4)
             main_prompt_chain = init_llm(main_prompt)
 
             # Run LLM
@@ -247,6 +302,8 @@ if file is not None:
                 use_fake_prompt=use_fake_prompt,
                 fake_answer=st.secrets["fake_answer"],
             )
+            # Question creation LLM
+
     with tab2:
         with st.expander("OpenAI Response:"):
             st.write(main_prompt_answer)  # BORRAR
@@ -262,6 +319,8 @@ if file is not None:
             st.write(main_prompt)
         with st.expander("AssemblyAI results"):
             st.write(results.json())
+        with st.expander("audio_text_vector"):
+            st.write(audio_text_vector)
     with tab1:
         st.header("Summary", anchor="S0")
         with st.sidebar:
@@ -272,10 +331,12 @@ if file is not None:
         i = 0
 
         for part in titles_formatted:
+            # Divide in Cols
             col1, col2 = st.columns([5, 2])
+            # Add Subheader
             with col1:
                 st.subheader(titles_formatted[i], anchor="P" + str(i + 1))
-
+            # Add Mini video
             with col2:
                 st.video(
                     file,
@@ -283,7 +344,15 @@ if file is not None:
                         "timestamp"
                     ]["start"],
                 )
+            # Add summary
             st.write(summaries_formatted[i])
+            # Add multiple choice question
+            prompt_aux = (
+                st.secrets["multiple_choice_header_prompt"] + audio_text_vector[i]
+            )
+            if i < len(titles_formatted):
+                mult_choice_question = simple_llm_run(prompt_aux)
+                format_simple_llm_questions(mult_choice_question)
             st.divider()
             with st.sidebar:
                 st.write("[" + titles_formatted[i] + "](#P" + str(i + 1) + ")")
