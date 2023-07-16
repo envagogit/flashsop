@@ -22,6 +22,7 @@ use_fake_prompt = False
 llm_temperature = 0.0
 temp_multiple_choice_qs = 0.3
 temp_step_sequencer = 0.5
+temp_tool_list = 0.3
 apikey = st.secrets["OPENAI_API_KEY"]
 os.environ["OPENAI_API_KEY"] = apikey
 
@@ -86,7 +87,7 @@ def create_process_table(sequenced_steps):
     return table
 
 
-def ms_to_hhmmss(ms):  # intpart,decimalpart = divmod(number,1)
+def ms_to_hhmmss(ms):
     sec_tot = round(float(ms) / 1000)
     sec = int(((sec_tot / 60) - float(int(sec_tot / 60))) * 60)
     min_tot = float(int(sec_tot / 60))
@@ -322,12 +323,13 @@ if file is not None:
         st.session_state.file = file
 
     # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
-            "Tutorial 🧑‍🎓",
-            "Questions ❓",
-            "Process Optimisation ⚙️",
-            "JSON 💻",
+            "Tutorial🧑‍🎓",
+            "Questions❓",
+            "Process Optimisation⚙️",
+            "Tools and Resources🛠️",
+            "JSON💻",
         ]
     )
     with tab1:
@@ -366,7 +368,7 @@ if file is not None:
             )
             # Question creation LLM
 
-    with tab4:
+    with tab5:
         with st.expander("OpenAI Response:"):
             st.write(main_prompt_answer)  # BORRAR
     # Format LLM output
@@ -376,7 +378,7 @@ if file is not None:
 
     # UI Generation
     prompt = st.chat_input("Any questions?")
-    with tab4:
+    with tab5:
         with st.expander("Main Prompt"):
             st.write(main_prompt)
         with st.expander("AssemblyAI results"):
@@ -391,7 +393,9 @@ if file is not None:
         st.write(results.json()["summary"])
         st.divider()
         i = 0
-
+    with tab5:
+        with st.expander("audio_text"):
+            st.write(audio_text)
     for part in titles_formatted:
         # Divide in Cols
         with tab1:
@@ -432,6 +436,24 @@ if file is not None:
         )
         process_table = create_process_table(sequenced_steps)
         st.write(process_table)
-    with tab4:
+    with tab5:
         with st.expander("sequenced_steps"):
             st.write(sequenced_steps)
+
+    tool_list = simple_llm_run(
+        st.secrets["tools_prompt"] + audio_text + st.secrets["tools_prompt2"],
+        temp_tool_list,
+    )
+    if "none" not in tool_list:
+        tool_vector = tool_list.split("\n")
+        with tab5:
+            with st.expander("tool_vector"):
+                st.write(tool_vector)
+        with tab4:
+            for tool in tool_vector:
+                if ":" in tool:
+                    with st.expander(tool.split(":")[0]):
+                        st.write(tool.split(":")[1])
+    else:
+        with tab4:
+            st.write("No tools or resources found")
