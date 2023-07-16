@@ -307,14 +307,48 @@ def format_simple_llm_questions(text):
             i = i + 1
 
 
-st.set_page_config(page_title="Flash SOP", page_icon="⚡")
+st.set_page_config(page_title="Easy SOP", page_icon="⚡")
 st.markdown(
-    "<h1 style='text-align: center;'>Fla⚡h SOP</h1>",
+    "<h1 style='text-align: center;'>Easy ⚡ SOP</h1>",
     unsafe_allow_html=True,
 )
 # language = st.selectbox("Language:", ("🇺🇸 🇦🇺 🇬🇧", "🇪🇸", "🇩🇪", "🇫🇷", "🇳🇱", "🇮🇹", "🇵🇹"))
 
-file = st.file_uploader("Upload a video file to generate a tutorial")
+if "continue" not in st.session_state:
+    st.session_state["continue"] = False
+
+if not st.session_state["continue"]:
+    st.write(
+        "<h5 style='text-align: center;'>Upload a video where a process is explained by audio</h5>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+    st.write(
+        "<div style='text-align: center;'>✨Wait for the magic...✨</div>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+    st.write(
+        "<div style='text-align: center;'>An SOP will be created with the following sections:</div>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+
+    file = None
+    col1, col2, col3 = st.columns([29, 40, 20])
+    with col2:
+        st.write("🧑‍🎓 Tutorial")
+        st.write("❓ Test")
+        st.write("⚙️ Process Optimisation")
+        st.write("🛠️ Tools and Resources")
+        st.write("")
+    col1, col2, col3 = st.columns([4, 3, 4])
+    with col2:
+        st.session_state["continue"] = st.button("Start Easy ⚡ SOP", type="primary")
+# st.experimental_rerun()
+
+if st.session_state["continue"]:
+    file = st.file_uploader("Upload a video file to generate a tutorial")
 
 if file is not None:
     # Save file
@@ -326,7 +360,7 @@ if file is not None:
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Tutorial🧑‍🎓",
-            "Questions❓",
+            "Test❓",
             "Process Optimisation⚙️",
             "Tools and Resources🛠️",
             "JSON💻",
