@@ -11,14 +11,17 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 from langchain.callbacks import get_openai_callback
+from datetime import timedelta
 import openai
-import random
+
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
 start_time_conversion = 1000
 use_fake_prompt = False
 llm_temperature = 0.0
+temp_multiple_choice_qs = 0.3
+temp_step_sequencer = 0.5
 apikey = st.secrets["OPENAI_API_KEY"]
 os.environ["OPENAI_API_KEY"] = apikey
 
@@ -37,6 +40,62 @@ def save_uploadedfile(uploadedfile):
 def extract_audio(video_path, savename):
     clip = mp.VideoFileClip(video_path)
     clip.audio.write_audiofile(savename)
+
+
+def create_text_with_times(results):
+    text_with_times = ""
+    i = 0
+    for word in results.json()["words"]:
+        if i == 0:
+            text_with_times = (
+                text_with_times + "[" + str(word["start"]) + "] " + word["text"]
+            )
+        elif "." in results.json()["words"][i - 1]["text"]:
+            text_with_times = (
+                text_with_times + " [" + str(word["start"]) + "] " + word["text"]
+            )
+        else:
+            text_with_times = text_with_times + " " + word["text"]
+        i = i + 1
+    return text_with_times
+
+
+def create_process_table(sequenced_steps):
+    split1 = sequenced_steps.split("[")
+    aux_start_time = 0
+    start_times = []
+    steps = []
+    durations = []
+    i = 0
+    for part in split1:
+        if "]" in part:
+            split_part = part.split("]")  # str(timedelta(seconds=sec))
+            if i != 0:
+                durations.append(ms_to_hhmmss(int(split_part[0]) - aux_start_time))
+            start_times.append(ms_to_hhmmss(int(split_part[0])))
+            if ":" in split_part[1]:
+                steps.append(split_part[1].split(":")[1])
+            else:
+                steps.append(split_part[1])
+            aux_start_time = int(split_part[0])
+            i = i + 1
+    durations.append("0:0:0")
+    table = pd.DataFrame(
+        {"Step": steps, "Start Time": start_times, "Duration": durations}
+    )
+    return table
+
+
+def ms_to_hhmmss(ms):  # intpart,decimalpart = divmod(number,1)
+    sec_tot = round(float(ms) / 1000)
+    sec = int(((sec_tot / 60) - float(int(sec_tot / 60))) * 60)
+    min_tot = float(int(sec_tot / 60))
+    min = int((min_tot / 60 - float(int(min_tot / 60))) * 60)
+    hour = int(min_tot / 60)
+    print(ms)
+    time = str(hour) + ":" + str(min) + ":" + str(sec)
+    print(time)
+    return time
 
 
 # Old func
@@ -200,11 +259,12 @@ def format_llm_output(llm_output):
 
 
 # Simple LLM
-def simple_llm_run(prompt):
+# @st.cache_data
+def simple_llm_run(prompt, temp):
     main_memory = ConversationBufferMemory(
         input_key="user_input", memory_key="chat_history"
     )
-    llm = OpenAI(temperature=llm_temperature)
+    llm = OpenAI(temperature=temp)
     prompt_template = PromptTemplate(
         input_variables=["user_input"],
         template=prompt + "{user_input}",
@@ -262,10 +322,12 @@ if file is not None:
         st.session_state.file = file
 
     # Tabs
-    tab1, tab2 = st.tabs(
+    tab1, tab2, tab3, tab4 = st.tabs(
         [
-            "Content 🗒️",
-            "JSON",
+            "Tutorial 🧑‍🎓",
+            "Questions ❓",
+            "Process Optimisation ⚙️",
+            "JSON 💻",
         ]
     )
     with tab1:
@@ -304,7 +366,7 @@ if file is not None:
             )
             # Question creation LLM
 
-    with tab2:
+    with tab4:
         with st.expander("OpenAI Response:"):
             st.write(main_prompt_answer)  # BORRAR
     # Format LLM output
@@ -314,7 +376,7 @@ if file is not None:
 
     # UI Generation
     prompt = st.chat_input("Any questions?")
-    with tab2:
+    with tab4:
         with st.expander("Main Prompt"):
             st.write(main_prompt)
         with st.expander("AssemblyAI results"):
@@ -330,8 +392,9 @@ if file is not None:
         st.divider()
         i = 0
 
-        for part in titles_formatted:
-            # Divide in Cols
+    for part in titles_formatted:
+        # Divide in Cols
+        with tab1:
             col1, col2 = st.columns([5, 2])
             # Add Subheader
             with col1:
@@ -348,12 +411,27 @@ if file is not None:
             st.write(summaries_formatted[i])
             # Add multiple choice question
             prompt_aux = (
-                st.secrets["multiple_choice_header_prompt"] + audio_text_vector[i]
+                st.secrets["multiple_choice_header_prompt"]
+                + results.json()["iab_categories_result"]["results"][i]["text"]
             )
+        with tab2:
             if i < len(titles_formatted):
-                mult_choice_question = simple_llm_run(prompt_aux)
+                mult_choice_question = simple_llm_run(
+                    prompt_aux, temp_multiple_choice_qs
+                )
                 format_simple_llm_questions(mult_choice_question)
+        with tab1:
             st.divider()
             with st.sidebar:
                 st.write("[" + titles_formatted[i] + "](#P" + str(i + 1) + ")")
             i = i + 1
+    with tab3:
+        text_with_times = create_text_with_times(results)
+        sequenced_steps = simple_llm_run(
+            st.secrets["step_sequencer_prompt"] + text_with_times, temp_step_sequencer
+        )
+        process_table = create_process_table(sequenced_steps)
+        st.write(process_table)
+    with tab4:
+        with st.expander("sequenced_steps"):
+            st.write(sequenced_steps)
